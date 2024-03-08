@@ -39,7 +39,18 @@ blogRouter.get('/all', async (c) => {
             datasourceUrl: c.env.DATABASE_URL
         }).$extends(withAccelerate());
 
-        const blogs = await prisma.blog.findMany();
+        const blogs = await prisma.blog.findMany({
+            select: {
+                content: true,
+                title: true,
+                id: true,
+                author: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
+        });
         return c.json(blogs)
     } catch (err) {
         c.status(500);
@@ -75,6 +86,7 @@ blogRouter.post('/', async (c) => {
                 message: "Invalid type"
             })
         }
+        console.log("reaching here after success");
         const blog = await prisma.blog.create({
             data: {
                 title: body.title,

@@ -39,25 +39,31 @@ userRouter.post('/signup', async (c) => {
 })
 
 userRouter.post('/signin', async (c) => {
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL
-    }).$extends(withAccelerate());
+    try {
+        const prisma = new PrismaClient({
+            datasourceUrl: c.env.DATABASE_URL
+        }).$extends(withAccelerate());
 
-    const body = await c.req.json();
-    const { success } = signinInput.safeParse(body);
-    if (!success) {
-        c.status(403);
-        return c.json({
-            message: "Invalid type"
+        const body = await c.req.json();
+        const { success } = signinInput.safeParse(body);
+        if (!success) {
+            c.status(403);
+            return c.json({
+                message: "Invalid type"
+            })
+        }
+        const user = await prisma.user.findUnique({
+            where: { email: body.email, password: body.password }
         })
+        if (!user) {
+            c.status(403);
+            return c.json({ error: "user not found" });
+        }
+        const token = await sign({ id: user.id }, c.env.JWT_SECRET)
+        return c.json({ token });
+    } catch (err) {
+        console.log(err);
+        c.status(500);
+        return c.json({ message: "Something went wrong!" });
     }
-    const user = await prisma.user.findUnique({
-        where: { email: body.email, password: body.password }
-    })
-    if (!user) {
-        c.status(403);
-        return c.json({ error: "user not found" });
-    }
-    const token = await sign({ id: user.id }, c.env.JWT_SECRET)
-    return c.json({ token })
 })
